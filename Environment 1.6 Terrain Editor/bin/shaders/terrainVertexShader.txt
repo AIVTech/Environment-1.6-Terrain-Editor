@@ -1,0 +1,51 @@
+#version 400 core
+
+in vec3 vertexPosition;
+in vec2 textureCoordinate;
+in vec3 normalVector;
+
+out vec2 pass_uvCoordinate;
+out vec3 surfaceNormal;
+
+uniform mat4 transformationMatrix;
+uniform mat4 projectionMatrix;
+uniform mat4 viewMatrix;
+
+// brush settings
+
+uniform float brushEnabled;
+uniform vec4 brushColor;
+uniform vec3 rayPosition;
+uniform float brushRadius;
+
+out float shouldPaint; // passing to the fragment shader
+out vec4 fragment_BrushColor;
+
+float distanceBetweenTwoPoints(vec3 first, vec3 second)
+{
+	float xDiff = (first.x - second.x) * (first.x - second.x);
+	float yDiff = (first.y - second.y) * (first.y - second.y);
+	float zDiff = (first.z - second.z) * (first.z - second.z);
+	float distance = sqrt(xDiff + yDiff + zDiff);
+	return distance;
+}
+
+void main(void)
+{	
+	vec4 worldPosition = transformationMatrix * vec4(vertexPosition, 1.0);
+	gl_Position = projectionMatrix * viewMatrix * worldPosition;
+	pass_uvCoordinate = textureCoordinate * 660;
+	surfaceNormal = (transformationMatrix * vec4(normalVector, 0.0)).xyz;
+	
+	shouldPaint = 0;
+	if (brushEnabled == 1)
+	{
+		float distance = distanceBetweenTwoPoints(worldPosition.xyz, rayPosition);
+		if (distance < brushRadius)
+		{
+			shouldPaint = 1;
+		}
+	}
+	
+	fragment_BrushColor = brushColor;
+}
