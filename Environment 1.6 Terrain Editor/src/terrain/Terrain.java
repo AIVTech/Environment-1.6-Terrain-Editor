@@ -20,6 +20,7 @@ public class Terrain {
 	private final int VERTEX_COUNT = 1024;
 	private float highestPoint = 0;
 	private float lowestPoint = 0;
+	private float[][] heights;
 
 	private float x, z;
 	private Mesh mesh;
@@ -57,6 +58,7 @@ public class Terrain {
 	private Mesh generateTerrain(StaticLoader loader) {
 		vertices.clear();
 		int count = VERTEX_COUNT * VERTEX_COUNT;
+		heights = new float[VERTEX_COUNT][VERTEX_COUNT];
 		float[] vertexArray = new float[count * 3];
 		float[] normals = new float[count * 3];
 		float[] textureCoords = new float[count * 2];
@@ -67,6 +69,7 @@ public class Terrain {
 				float pointHeight = 0;
 				TerrainPoint vertex = new TerrainPoint((float) j / ((float) VERTEX_COUNT - 1) * SIZE,
 						(float) i / ((float) VERTEX_COUNT - 1) * SIZE);
+				heights[j][i] = pointHeight;
 				vertex.setHeight(pointHeight);
 				vertices.add(vertex);
 				normals[vertexPointer * 3] = 0;
@@ -120,23 +123,7 @@ public class Terrain {
 	public boolean inRange(Vector3f first, Vector3f second, float radius) {
 		return distanceBetweenTwoVectors(first, second) < radius;
 	}
-
-	public Vector3f worldToGridCoords(Vector3f vertex) {
-		return new Vector3f(vertex.x / SIZE, vertex.y, vertex.z / SIZE);
-	}
-
-	public Vector3f gridToWorldCoords(Vector3f vertex) {
-		return new Vector3f(vertex.x * SIZE, vertex.y, (1 - vertex.z) * SIZE);
-	}
-
-	public float worldToGridFloat(float value) {
-		return value / SIZE;
-	}
-
-	public float gridToWorldFloat(float value) {
-		return value * SIZE;
-	}
-
+	
 	private void processVertexHeight(TerrainPoint vertex) {
 		if (vertex.getHeight() > highestPoint) {
 			highestPoint = vertex.getHeight();
@@ -158,6 +145,8 @@ public class Terrain {
 		for (TerrainPoint vertex : vertices) {
 			if (inRange(new Vector3f(vertex.x, vertex.getHeight(), vertex.z), new Vector3f(rayX, rayPosition.y, rayZ), targetRadius)) {
 				vertex.setHeight(vertex.getHeight() + maxHeight);
+				heights[(int) (vertex.x/SIZE)][(int) (vertex.z/SIZE)] = (int) vertex.getHeight();
+				//System.out.println(heights[(int) (vertex.x/SIZE)][(int) (vertex.z/SIZE)]);
 			}
 			processVertexHeight(vertex);
 		}
@@ -180,8 +169,19 @@ public class Terrain {
 		return texture;
 	}
 
-	public float getHeightOfTerrain(float x, float z) {
-		// return (highestPoint);
-		return 0;
+	public float getHeightOfTerrain(float worldX, float worldZ) {
+		float terrainX = worldX - this.x;
+        float terrainZ = worldZ - this.z;
+        float gridSquareSize = SIZE / ((float) heights.length - 1);
+        int gridX = (int) Math.floor(terrainX / gridSquareSize);
+        int gridZ = (int) Math.floor(terrainZ / gridSquareSize);
+           
+        if(gridX >= heights.length - 1 || gridZ >= heights.length - 1 || gridX < 0 || gridZ < 0) {
+            return 0;
+        }
+           
+        float xCoord = (terrainX % gridSquareSize)/gridSquareSize;
+        float zCoord = (terrainZ % gridSquareSize)/gridSquareSize;
+        return heights[(int) xCoord][(int) zCoord];
 	}
 }

@@ -70,6 +70,7 @@ public class TerrainEditor {
 					
 					mousePicker.update();
 					Vector3f rayPosition = mousePicker.getCurrentTerrainPoint();
+					System.out.println(rayPosition);
 					if (rayPosition != null) {
 						renderer.setRayPosition(rayPosition);
 					}
