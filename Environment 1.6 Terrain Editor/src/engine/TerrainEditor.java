@@ -39,6 +39,18 @@ public class TerrainEditor {
 	private static void setTerrainTexture(String textureFilepath) {
 		terrains.get(0).setTexture(textureFilepath, loader);
 	}
+	
+	private static void saveTerrainFile(String outputPath) {
+		terrains.get(0).writeTerrainDataToFile(outputPath);
+	}
+	
+	private static void openTerrainFile(String filepath) {
+		terrains.get(0).loadFromFile(filepath, loader);
+	}
+	
+	private static void loadNewTerrain() {
+		terrains.get(0).loadFlatTerrain(loader);
+	}
 
 	private static void startMain() {
 		glThread = new Thread(new Runnable() {
@@ -70,7 +82,6 @@ public class TerrainEditor {
 					
 					mousePicker.update();
 					Vector3f rayPosition = mousePicker.getCurrentTerrainPoint();
-					System.out.println(rayPosition);
 					if (rayPosition != null) {
 						renderer.setRayPosition(rayPosition);
 					}
@@ -105,7 +116,7 @@ public class TerrainEditor {
 	private static void ProcessWindowInput() {
 		if (editingMode) {												// Edit the terrain height in a highlighted spot
 			if (Mouse.isButtonDown(1)) {
-				terrain.changeVerticesHeight(mousePicker.getCurrentTerrainPoint(), DisplayManager.brushRadius, 2);
+				terrain.changeVerticesHeight(mousePicker.getCurrentTerrainPoint(), DisplayManager.brushRadius, DisplayManager.brushForce, DisplayManager.editingTransformationMode);
 			}
 		}
 	}
@@ -146,6 +157,21 @@ public class TerrainEditor {
 		if (DisplayManager.changeBrushRadius) {							// Update brush radius
 			renderer.setBrushRadius(DisplayManager.brushRadius);
 			DisplayManager.changeBrushRadius = false;
+		}
+		
+		if (DisplayManager.saveTerrainFile) {							// Save terrain file
+			DisplayManager.saveTerrainFile = false;
+			saveTerrainFile(DisplayManager.outputPath);
+		}
+		
+		if (DisplayManager.openTerrainFile) {							// Open terrain file
+			DisplayManager.openTerrainFile = false;
+			openTerrainFile(DisplayManager.openTerrainFilePath);
+		}
+		
+		if (DisplayManager.loadNewTerrain) {
+			DisplayManager.loadNewTerrain = false;
+			loadNewTerrain();
 		}
 	}
 

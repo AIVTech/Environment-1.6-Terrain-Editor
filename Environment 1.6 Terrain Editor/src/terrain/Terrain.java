@@ -1,5 +1,11 @@
 package terrain;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +23,7 @@ import models.MeshTexture;
 public class Terrain {
 
 	private final float SIZE = 4096;
-	private final int VERTEX_COUNT = 1024;
+	private int VERTEX_COUNT = 1024;
 	private float highestPoint = 0;
 	private float lowestPoint = 0;
 	private float[][] heights;
@@ -33,9 +39,9 @@ public class Terrain {
 		this.texture = texture;
 		this.x = gridX * SIZE;
 		this.z = gridZ * SIZE;
-		this.mesh = generateTerrain(loader);
+		this.mesh = generateFlatTerrain(loader);
 	}
-	
+
 	public void setTexture(String filename, StaticLoader loader) {
 		this.texture = loader.loadMeshTexture(filename);
 	}
@@ -55,7 +61,11 @@ public class Terrain {
 		return buffer;
 	}
 
-	private Mesh generateTerrain(StaticLoader loader) {
+	public void loadFlatTerrain(StaticLoader loader) {
+		this.mesh = generateFlatTerrain(loader);
+	}
+
+	private Mesh generateFlatTerrain(StaticLoader loader) {
 		vertices.clear();
 		int count = VERTEX_COUNT * VERTEX_COUNT;
 		heights = new float[VERTEX_COUNT][VERTEX_COUNT];
@@ -123,7 +133,7 @@ public class Terrain {
 	public boolean inRange(Vector3f first, Vector3f second, float radius) {
 		return distanceBetweenTwoVectors(first, second) < radius;
 	}
-	
+
 	private void processVertexHeight(TerrainPoint vertex) {
 		if (vertex.getHeight() > highestPoint) {
 			highestPoint = vertex.getHeight();
@@ -132,8 +142,43 @@ public class Terrain {
 		}
 	}
 
-	public void changeVerticesHeight(Vector3f rayPosition, float targetRadius, float maxHeight) { // MAIN METHOD FOR EDITING THE TERRAIN
-		if (rayPosition == null || targetRadius < 0.001) {
+	private void transformVertexHeightSinusoid(TerrainPoint vertex, float rayX, float rayHeight, float rayZ,
+			float radius, float maxHeight) {
+		float distanceToVertex = distanceBetweenTwoVectors(new Vector3f(vertex.x, vertex.getHeight(), vertex.z),
+				new Vector3f(rayX, rayHeight, rayZ));
+		if (distanceToVertex < radius) {
+			float targetHeight = maxHeight * (float) (Math.cos((Math.PI / (2 * radius)) * distanceToVertex))
+					+ vertex.getHeight();
+			vertex.setHeight(targetHeight);
+			heights[(int) (vertex.x / SIZE)][(int) (vertex.z / SIZE)] = (int) vertex.getHeight();
+		}
+	}
+
+	private void transformVertexHeightSharp(TerrainPoint vertex, float rayX, float rayHeight, float rayZ, float radius,
+			float maxHeight) {
+		if (inRange(new Vector3f(vertex.x, vertex.getHeight(), vertex.z), new Vector3f(rayX, rayHeight, rayZ),
+				radius)) {
+			vertex.setHeight(vertex.getHeight() + maxHeight);
+			heights[(int) (vertex.x / SIZE)][(int) (vertex.z / SIZE)] = (int) vertex.getHeight();
+		}
+	}
+
+	private void transformVertexHeightEraser(TerrainPoint vertex, float rayX, float rayHeight, float rayZ, float radius,
+			float maxHeight) {
+		if (inRange(new Vector3f(vertex.x, vertex.getHeight(), vertex.z), new Vector3f(rayX, rayHeight, rayZ),
+				radius)) {
+			vertex.setHeight(maxHeight);
+			heights[(int) (vertex.x / SIZE)][(int) (vertex.z / SIZE)] = (int) vertex.getHeight();
+		}
+	}
+
+	public void changeVerticesHeight(Vector3f rayPosition, float radius, float maxHeight, String transformationMode) { // MAIN
+																														// METHOD
+																														// FOR
+																														// EDITING
+																														// THE
+																														// TERRAIN
+		if (rayPosition == null || radius < 0.001) {
 			return;
 		}
 		float rayX = rayPosition.x;
@@ -143,10 +188,19 @@ public class Terrain {
 		}
 		rayZ = SIZE - rayZ;
 		for (TerrainPoint vertex : vertices) {
-			if (inRange(new Vector3f(vertex.x, vertex.getHeight(), vertex.z), new Vector3f(rayX, rayPosition.y, rayZ), targetRadius)) {
-				vertex.setHeight(vertex.getHeight() + maxHeight);
-				heights[(int) (vertex.x/SIZE)][(int) (vertex.z/SIZE)] = (int) vertex.getHeight();
-				//System.out.println(heights[(int) (vertex.x/SIZE)][(int) (vertex.z/SIZE)]);
+			switch (transformationMode) {
+			case "sharp":
+				transformVertexHeightSharp(vertex, rayX, rayPosition.y, rayZ, radius, maxHeight); // Sharp
+				break;
+			case "sinusoidal":
+				transformVertexHeightSinusoid(vertex, rayX, rayPosition.y, rayZ, radius, maxHeight); // Sinusoidal
+				break;
+			case "eraser":
+				transformVertexHeightEraser(vertex, rayX, rayPosition.y, rayZ, radius, maxHeight); // Eraser for Terrain
+				break;
+			default:
+				transformVertexHeightSharp(vertex, rayX, rayPosition.y, rayZ, radius, maxHeight); // Default (Sharp)
+				break;
 			}
 			processVertexHeight(vertex);
 		}
@@ -171,17 +225,143 @@ public class Terrain {
 
 	public float getHeightOfTerrain(float worldX, float worldZ) {
 		float terrainX = worldX - this.x;
-        float terrainZ = worldZ - this.z;
-        float gridSquareSize = SIZE / ((float) heights.length - 1);
-        int gridX = (int) Math.floor(terrainX / gridSquareSize);
-        int gridZ = (int) Math.floor(terrainZ / gridSquareSize);
-           
-        if(gridX >= heights.length - 1 || gridZ >= heights.length - 1 || gridX < 0 || gridZ < 0) {
-            return 0;
-        }
-           
-        float xCoord = (terrainX % gridSquareSize)/gridSquareSize;
-        float zCoord = (terrainZ % gridSquareSize)/gridSquareSize;
-        return heights[(int) xCoord][(int) zCoord];
+		float terrainZ = worldZ - this.z;
+		float gridSquareSize = SIZE / ((float) heights.length - 1);
+		int gridX = (int) Math.floor(terrainX / gridSquareSize);
+		int gridZ = (int) Math.floor(terrainZ / gridSquareSize);
+
+		if (gridX >= heights.length - 1 || gridZ >= heights.length - 1 || gridX < 0 || gridZ < 0) {
+			return 0;
+		}
+
+		float xCoord = (terrainX % gridSquareSize) / gridSquareSize;
+		float zCoord = (terrainZ % gridSquareSize) / gridSquareSize;
+		return heights[(int) xCoord][(int) zCoord];
+	}
+
+	private Mesh loadPreBuiltTerrain(List<Float> vertexFloats, List<Float> normalArray, int vertexCount,
+			StaticLoader loader) {
+		vertices.clear();
+		this.VERTEX_COUNT = vertexCount;
+		int count = VERTEX_COUNT * VERTEX_COUNT;
+		heights = new float[VERTEX_COUNT][VERTEX_COUNT];
+		float[] vertexArray = new float[count * 3];
+		float[] normals = new float[count * 3];
+		float[] textureCoords = new float[count * 2];
+		int[] indices = new int[6 * (VERTEX_COUNT - 1) * (VERTEX_COUNT - 1)];
+		int vertexPointer = 0;
+		for (int i = 0; i < VERTEX_COUNT; i++) {
+			for (int j = 0; j < VERTEX_COUNT; j++) {
+				float pointHeight = vertexFloats.get(vertexPointer * 3 + 1);
+				TerrainPoint vertex = new TerrainPoint(vertexFloats.get(vertexPointer * 3),
+						vertexFloats.get(vertexPointer * 3 + 2));
+				heights[j][i] = pointHeight;
+				vertex.setHeight(pointHeight);
+				vertices.add(vertex);
+				normals[vertexPointer * 3] = normalArray.get(vertexPointer * 3);
+				normals[vertexPointer * 3 + 1] = normalArray.get(vertexPointer * 3 + 1);
+				normals[vertexPointer * 3 + 2] = normalArray.get(vertexPointer * 3 + 2);
+				textureCoords[vertexPointer * 2] = (float) j / ((float) VERTEX_COUNT - 1);
+				textureCoords[vertexPointer * 2 + 1] = (float) i / ((float) VERTEX_COUNT - 1);
+				vertexPointer++;
+			}
+		}
+		int pointer = 0;
+		for (int gz = 0; gz < VERTEX_COUNT - 1; gz++) {
+			for (int gx = 0; gx < VERTEX_COUNT - 1; gx++) {
+				int topLeft = (gz * VERTEX_COUNT) + gx;
+				int topRight = topLeft + 1;
+				int bottomLeft = ((gz + 1) * VERTEX_COUNT) + gx;
+				int bottomRight = bottomLeft + 1;
+				indices[pointer++] = topLeft;
+				indices[pointer++] = bottomLeft;
+				indices[pointer++] = topRight;
+				indices[pointer++] = topRight;
+				indices[pointer++] = bottomLeft;
+				indices[pointer++] = bottomRight;
+			}
+		}
+
+		vertexArray = getVerticesFromList(vertices);
+
+		return loader.loadTerrainMesh(vertexArray, textureCoords, normals, indices, verticesVboID);
+	}
+
+	public void loadFromFile(String filepath, StaticLoader loader) {
+		try {
+			FileReader isr = null;
+			File terFile = new File(filepath);
+
+			try {
+				isr = new FileReader(terFile);
+			} catch (FileNotFoundException e) {
+				return;
+			}
+
+			BufferedReader reader = new BufferedReader(isr);
+			String line;
+
+			try {
+				String vertexCountLine = reader.readLine();
+				String[] parsedLine = vertexCountLine.split("\\s+");
+				int vertex_count = Integer.valueOf(parsedLine[1]);
+
+				List<Float> vertexFloats = new ArrayList<Float>();
+				List<Float> normals = new ArrayList<Float>();
+				while (true) {
+					line = reader.readLine();
+					try {
+						if (line.startsWith("-point ")) {
+							String[] currentLine = line.split("\\s+");
+							float xPos = Float.valueOf(currentLine[1]);
+							float height = Float.valueOf(currentLine[2]);
+							float zPos = Float.valueOf(currentLine[3]);
+							vertexFloats.add(xPos);
+							vertexFloats.add(height);
+							vertexFloats.add(zPos);
+							normals.add(0f);
+							normals.add(1f);
+							normals.add(0f);
+						}
+						if (line.startsWith("-end")) {
+							break;
+						}
+					} catch (NullPointerException ne) {
+						break;
+					}
+				}
+
+				this.mesh = loadPreBuiltTerrain(vertexFloats, normals, vertex_count, loader);
+			} catch (IOException e) {
+				try {
+					reader.close();
+				} catch (IOException e1) {
+				}
+				return;
+			}
+			try {
+				reader.close();
+			} catch (IOException e) {
+			}
+		} catch (Exception ex) {
+
+		}
+	}
+
+	public void writeTerrainDataToFile(String outputPath) {
+		File outputFile = new File(outputPath);
+		try {
+			outputFile.createNewFile();
+			FileWriter fw = new FileWriter(outputFile, false);
+			fw.write("vertex_count " + VERTEX_COUNT + "\n");
+			for (TerrainPoint vertex : vertices) {
+				float xPos = vertex.x, zPos = vertex.z, height = vertex.getHeight();
+				fw.write("-point " + xPos + " " + height + " " + zPos + "\n");
+			}
+			fw.write("\n-end");
+			fw.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 }

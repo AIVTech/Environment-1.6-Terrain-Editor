@@ -121,7 +121,6 @@ public class MousePicker {
 		float height = 0;
 		if (terrain != null) {
 			height = terrain.getHeightOfTerrain(testPoint.getX(), testPoint.getZ());
-			//System.out.println(height);
 		}
 		if (testPoint.y < height) {
 			return true;

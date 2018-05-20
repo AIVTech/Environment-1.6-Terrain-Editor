@@ -21,10 +21,12 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.JSlider;
 import javax.swing.SwingConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.lwjgl.LWJGLException;
 import org.lwjgl.Sys;
@@ -37,8 +39,8 @@ import org.lwjgl.util.vector.Vector4f;
 
 public class DisplayManager {
 
-	//private static int DISPLAY_WIDTH = 1200;
-	//private static int DISPLAY_HEIGHT = 700;
+	// private static int DISPLAY_WIDTH = 1200;
+	// private static int DISPLAY_HEIGHT = 700;
 	private static int DISPLAY_WIDTH = 1700;
 	private static int DISPLAY_HEIGHT = 1000;
 	private static int preferedFPS_CAP = 250;
@@ -48,20 +50,20 @@ public class DisplayManager {
 
 	private static Canvas canvas;
 
-	//private int frameWidth = 1700;
-	//private int frameHeight = 1000;
+	// private int frameWidth = 1700;
+	// private int frameHeight = 1000;
 	private int frameWidth = 1700;
 	private int frameHeight = 1000;
-	//private int displayWidth = 1200;
-	//private int displayHeight = 700;
+	// private int displayWidth = 1200;
+	// private int displayHeight = 700;
 	private int displayWidth = 1700;
 	private int displayHeight = 1000;
-	
+
 	/* static controlling variables */
 	public static String textureFilePath = "";
 	public static boolean loadNewTexture = false;
 	public static boolean wireframeMode = false;
-	
+
 	// editing brush options
 	public static boolean brushEnabled = false;
 	public static boolean changeBrushState = false;
@@ -69,10 +71,19 @@ public class DisplayManager {
 	public static boolean changeBrushColor = false;
 	public static float brushRadius = 40.0f;
 	public static boolean changeBrushRadius = false;
-	
+	public static float brushForce = 1.0f;
+	public static String editingTransformationMode = "sharp";
+
 	// brush colors
 	private ArrayList<Vector4f> colorValues = new ArrayList<Vector4f>();
 	private ArrayList<String> colorNames = new ArrayList<String>();
+
+	public static String outputPath = null;
+	public static boolean saveTerrainFile = false;
+	public static String openTerrainFilePath = "";
+	public static boolean openTerrainFile = false;
+	public static boolean loadNewTerrain = false;
+	private boolean firstTimeLoad = true;
 
 	/**
 	 * @wbp.parser.entryPoint
@@ -85,7 +96,8 @@ public class DisplayManager {
 		frame.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent we) {
-				int result = JOptionPane.showConfirmDialog(frame, "Do you want to quit the Application?");
+				int result = JOptionPane.showConfirmDialog(frame, "Do you want to quit the Application?",
+						null, JOptionPane.YES_NO_OPTION, JOptionPane.PLAIN_MESSAGE, null);
 				if (result == JOptionPane.OK_OPTION) {
 					frame.setVisible(false);
 					frame.dispose(); // canvas's removeNotify() will be called
@@ -193,8 +205,8 @@ public class DisplayManager {
 		brushRadiusSlider.setBounds(1340, 250, 200, 30);
 		brushRadiusSlider.setBackground(Color.DARK_GRAY);
 		brushRadiusSlider.setMinimum(1);
-		brushRadiusSlider.setMaximum(240);
-		brushRadiusSlider.setValue(20);
+		brushRadiusSlider.setMaximum(160);
+		brushRadiusSlider.setValue(10);
 		brushRadiusSlider.setVisible(true);
 		mainPanel.add(brushRadiusSlider);
 		brushRadiusSlider.addChangeListener(new ChangeListener() {
@@ -203,6 +215,81 @@ public class DisplayManager {
 				changeBrushRadius = true;
 			}
 		});
+		
+		
+		JLabel brushForceLbl = new JLabel("Brush Force");
+		brushForceLbl.setBounds(1380, 320, 120, 30);
+		brushForceLbl.setHorizontalAlignment(SwingConstants.CENTER);
+		brushForceLbl.setForeground(Color.DARK_GRAY);
+		brushForceLbl.setVisible(true);
+		mainPanel.add(brushForceLbl);
+		
+		JSlider brushForceSlider = new JSlider();
+		brushForceSlider.setBounds(1340, 360, 200, 30);
+		brushForceSlider.setBackground(Color.DARK_GRAY);
+		brushForceSlider.setMinimum(-20);
+		brushForceSlider.setMaximum(20);
+		brushForceSlider.setValue(10);
+		brushForceSlider.setMajorTickSpacing(1);
+		brushForceSlider.setPaintTicks(true);
+		brushForceSlider.setVisible(true);
+		mainPanel.add(brushForceSlider);
+		brushForceSlider.addChangeListener(new ChangeListener() {
+			public void stateChanged(ChangeEvent arg0) {
+				float force = (float)brushForceSlider.getValue();
+				force /= 10;
+				if (force == 0) {
+					force = 2.0f;
+				}
+				brushForce = force;
+			}
+		});
+		
+		JRadioButton sharpModeRB = new JRadioButton("Sharp");
+		sharpModeRB.setBounds(1380, 430, 120, 30);
+		sharpModeRB.setVisible(true);
+		sharpModeRB.setSelected(true);
+		mainPanel.add(sharpModeRB);
+		
+		JRadioButton sinusoidalModeRB = new JRadioButton("Sinusoidal");
+		sinusoidalModeRB.setBounds(1380, 460, 120, 30);
+		sinusoidalModeRB.setVisible(true);
+		sinusoidalModeRB.setSelected(false);
+		mainPanel.add(sinusoidalModeRB);
+		
+		JRadioButton eraserModeRB = new JRadioButton("Eraser");
+		eraserModeRB.setBounds(1380, 490, 120, 30);
+		eraserModeRB.setVisible(true);
+		eraserModeRB.setSelected(false);
+		mainPanel.add(eraserModeRB);
+		
+		sharpModeRB.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				sharpModeRB.setSelected(true);
+				sinusoidalModeRB.setSelected(false);
+				eraserModeRB.setSelected(false);
+				editingTransformationMode = "sharp";
+			}
+		});
+		
+		sinusoidalModeRB.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				sinusoidalModeRB.setSelected(true);
+				sharpModeRB.setSelected(false);
+				eraserModeRB.setSelected(false);
+				editingTransformationMode = "sinusoidal";
+			}
+		});
+		
+		eraserModeRB.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				eraserModeRB.setSelected(true);
+				sharpModeRB.setSelected(false);
+				sinusoidalModeRB.setSelected(false);
+				editingTransformationMode = "eraser";
+			}
+		});
+		
 		
 		// Menu Bars
 		final JMenuBar topMenuBar = new JMenuBar();
@@ -217,16 +304,98 @@ public class DisplayManager {
 		
 		// File Menu Items
 		JMenuItem newFile_MenuItem = new JMenuItem("New Flat Terrain");
+		newFile_MenuItem.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				loadNewTerrain = true;
+			}
+		});
 		fileMenu.add(newFile_MenuItem);
 		
-		JMenuItem openFile_MenuItem = new JMenuItem("Open File");
+		JMenuItem openFile_MenuItem = new JMenuItem("Load Terrain");
+		openFile_MenuItem.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				JFileChooser fileChooser = new JFileChooser();
+				fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+				File workingDirectory = new File(System.getProperty("user.dir"));
+				fileChooser.setCurrentDirectory(workingDirectory);
+				int result = fileChooser.showOpenDialog(frame);
+				if(result == JFileChooser.OPEN_DIALOG) {
+					openTerrainFilePath = fileChooser.getSelectedFile().getAbsolutePath().toString();
+					openTerrainFile = true;
+                }
+			}
+		});
 		fileMenu.add(openFile_MenuItem);
 		fileMenu.addSeparator();
 		
 		JMenuItem saveFile_MenuItem = new JMenuItem("Save");
+		saveFile_MenuItem.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				if (outputPath == null) {
+					// Choosing output directory
+					JFileChooser fileChooser = new JFileChooser();
+					fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+					fileChooser.setFileFilter(new FileNameExtensionFilter("Terrain File", ".ter"));
+					File workingDirectory = new File(System.getProperty("user.dir"));
+					fileChooser.setCurrentDirectory(workingDirectory);
+					int result = fileChooser.showSaveDialog(frame);
+					if(result == JFileChooser.OPEN_DIALOG) {
+						outputPath = fileChooser.getSelectedFile().getAbsolutePath().toString();
+						if (!outputPath.endsWith(".ter")) {
+							outputPath += ".ter";
+						}
+						
+						if (firstTimeLoad) {
+							if (new File(outputPath).exists()) {
+								int choice = JOptionPane.showConfirmDialog(frame, "File already exists. Are you sure you want to overwrite?", 
+										null, JOptionPane.YES_NO_OPTION, JOptionPane.PLAIN_MESSAGE, null);
+								if (choice != 0) {
+									// User DOES NOT want to overwrite
+									return;
+								}
+							}
+							firstTimeLoad = false;
+						}
+						
+						saveTerrainFile = true;
+	                }
+				}
+				else {
+					saveTerrainFile = true;
+				}
+			}
+		});
 		fileMenu.add(saveFile_MenuItem);
 		
 		JMenuItem saveFileAs_MenuItem = new JMenuItem("Save As...");
+		saveFileAs_MenuItem.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				// Choosing output directory
+				JFileChooser fileChooser = new JFileChooser();
+				fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+				fileChooser.setFileFilter(new FileNameExtensionFilter("Terrain File", ".ter"));
+				File workingDirectory = new File(System.getProperty("user.dir"));
+				fileChooser.setCurrentDirectory(workingDirectory);
+				int result = fileChooser.showSaveDialog(frame);
+				if(result == JFileChooser.OPEN_DIALOG) {
+					outputPath = fileChooser.getSelectedFile().getAbsolutePath().toString();
+					if (!outputPath.endsWith(".ter")) {
+						outputPath += ".ter";
+					}
+					
+					if (new File(outputPath).exists()) {
+						int choice = JOptionPane.showConfirmDialog(frame, "File already exists. Are you sure you want to overwrite?", 
+								null, JOptionPane.YES_NO_OPTION, JOptionPane.PLAIN_MESSAGE, null);
+						if (choice != 0) {
+							// User DOES NOT want to overwrite
+							return;
+						}
+					}
+					
+					saveTerrainFile = true;
+                }
+			}
+		});
 		fileMenu.add(saveFileAs_MenuItem);
 		
 		// Edit Menu Items
