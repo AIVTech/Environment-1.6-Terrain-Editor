@@ -17,6 +17,7 @@ import org.newdawn.slick.opengl.TextureLoader;
 import core.VAO;
 import models.Mesh;
 import models.MeshTexture;
+import terrain.TerrainTexture;
 
 public class StaticLoader {
 
@@ -80,6 +81,21 @@ public class StaticLoader {
 		}
 		textures.add(texture.getTextureID());
 		return new MeshTexture(texture.getTextureID());
+	}
+	
+	public TerrainTexture loadTerrainTexture(String filename) {
+		Texture texture = null;
+		try {
+			texture = TextureLoader.getTexture("PNG", new FileInputStream(texturesFolder + filename));
+			GL30.glGenerateMipmap(GL11.GL_TEXTURE_2D);
+			GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR_MIPMAP_LINEAR);
+			GL11.glTexParameterf(GL11.GL_TEXTURE_2D, GL14.GL_TEXTURE_LOD_BIAS, -0.2f);
+		} catch (Exception e) {
+			System.out.println("Tried to load texture " + filename + ", didn't work");
+			return new TerrainTexture(0);
+		}
+		textures.add(texture.getTextureID());
+		return new TerrainTexture(texture.getTextureID());
 	}
 
 	public void cleanUp() {

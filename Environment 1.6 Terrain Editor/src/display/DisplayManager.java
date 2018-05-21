@@ -50,23 +50,19 @@ public class DisplayManager {
 
 	private static Canvas canvas;
 
-	// private int frameWidth = 1700;
-	// private int frameHeight = 1000;
 	private int frameWidth = 1700;
 	private int frameHeight = 1000;
-	// private int displayWidth = 1200;
-	// private int displayHeight = 700;
+
 	private int displayWidth = 1700;
 	private int displayHeight = 1000;
 
 	/* static controlling variables */
-	public static String textureFilePath = "";
-	public static boolean loadNewTexture = false;
+	public static String blendMapFilePath = "";
+	public static boolean loadNewBlendMap = false;
 	public static boolean wireframeMode = false;
 
 	// editing brush options
 	public static boolean brushEnabled = false;
-	public static boolean changeBrushState = false;
 	public static Vector4f brushColor = new Vector4f(1.0f, 1.0f, 0.0f, 1.0f);
 	public static boolean changeBrushColor = false;
 	public static float brushRadius = 40.0f;
@@ -84,20 +80,28 @@ public class DisplayManager {
 	public static boolean openTerrainFile = false;
 	public static boolean loadNewTerrain = false;
 	private boolean firstTimeLoad = true;
+	
+	public static String backTexFilePath = "";
+	public static String rTexFilePath = "";
+	public static String gTexFilePath = "";
+	public static String bTexFilePath = "";
+	public static boolean updateTerrainTextures = false;
+
+	private JFrame frame;
 
 	/**
 	 * @wbp.parser.entryPoint
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public void embedDisplay() {
-		final JFrame frame = new JFrame("Envrironment World Editor");
+		frame = new JFrame("Envrironment Terrain Editor");
 		frame.setSize(frameWidth, frameHeight);
 		frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		frame.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent we) {
-				int result = JOptionPane.showConfirmDialog(frame, "Do you want to quit the Application?",
-						null, JOptionPane.YES_NO_OPTION, JOptionPane.PLAIN_MESSAGE, null);
+				int result = JOptionPane.showConfirmDialog(frame, "Do you want to quit the Application?", null,
+						JOptionPane.YES_NO_OPTION, JOptionPane.PLAIN_MESSAGE, null);
 				if (result == JOptionPane.OK_OPTION) {
 					frame.setVisible(false);
 					frame.dispose(); // canvas's removeNotify() will be called
@@ -113,19 +117,19 @@ public class DisplayManager {
 		mainPanel.setBackground(Color.DARK_GRAY);
 
 		/************** ALL THE GUI STUFF HERE **********************/
-		colorValues.add(new Vector4f(1.0f, 1.0f, 0.0f, 1.0f));	// yellow
-		colorValues.add(new Vector4f(0.0f, 1.0f, 0.0f, 1.0f));	// green
-		colorValues.add(new Vector4f(1.0f, 0.0f, 0.0f, 1.0f));	// red
-		colorValues.add(new Vector4f(0.0f, 0.0f, 1.0f, 1.0f));	// blue
-		
+		colorValues.add(new Vector4f(1.0f, 1.0f, 0.0f, 1.0f)); // yellow
+		colorValues.add(new Vector4f(1.0f, 0.0f, 0.0f, 1.0f)); // red
+		colorValues.add(new Vector4f(0.0f, 1.0f, 0.0f, 1.0f)); // green
+		colorValues.add(new Vector4f(0.0f, 0.0f, 1.0f, 1.0f)); // blue
+
 		colorNames.add("Yellow");
-		colorNames.add("Green");
 		colorNames.add("Red");
+		colorNames.add("Green");
 		colorNames.add("Blue");
-		
+
 		brushColor = colorValues.get(0);
-		
-		JButton loadTextureBtn = new JButton("Load Texture");
+
+		JButton loadTextureBtn = new JButton("Load BlendMap");
 		loadTextureBtn.setBounds(1280, 60, 140, 30);
 		loadTextureBtn.setVisible(true);
 		mainPanel.add(loadTextureBtn);
@@ -136,15 +140,56 @@ public class DisplayManager {
 				File workingDirectory = new File(System.getProperty("user.dir"));
 				fileChooser.setCurrentDirectory(workingDirectory);
 				int result = fileChooser.showOpenDialog(frame);
-				String texturePath = "";
-				if(result == JFileChooser.OPEN_DIALOG) {
-					texturePath = fileChooser.getSelectedFile().getAbsolutePath().toString();
-					textureFilePath = texturePath;
-					loadNewTexture = true;
-                }
+				String blendMapPath = "";
+				if (result == JFileChooser.OPEN_DIALOG) {
+					blendMapPath = fileChooser.getSelectedFile().getName();
+					blendMapFilePath = blendMapPath;
+					loadNewBlendMap = true;
+				}
 			}
 		});
-		
+
+		JButton updateTexturesBtn = new JButton("Load New Textures");
+		updateTexturesBtn.setBounds(1350, 590, 180, 30);
+		updateTexturesBtn.setVisible(true);
+		mainPanel.add(updateTexturesBtn);
+		updateTexturesBtn.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				String filepath = "";
+				int result = promptUser("Update Background Texture?");
+				if (result == 0) {
+					filepath = chooseFile();
+					if (!filepath.equals("")) {
+						backTexFilePath = filepath;
+					}
+				}
+				result = promptUser("Update R Texture?");
+				if (result == 0) {
+					filepath = chooseFile();
+					if (!filepath.equals("")) {
+						rTexFilePath = filepath;
+					}
+				}
+				result = promptUser("Update G Texture?");
+				if (result == 0) {
+					filepath = chooseFile();
+					if (!filepath.equals("")) {
+						gTexFilePath = filepath;
+					}
+				}
+				result = promptUser("Update B Texture?");
+				if (result == 0) {
+					filepath = chooseFile();
+					if (!filepath.equals("")) {
+						bTexFilePath = filepath;
+					}
+				}
+				
+				// Update Textures
+				updateTerrainTextures = true;
+			}
+		});
+
 		JButton toggleWireframeBtn = new JButton("Enable Wireframe Mode");
 		toggleWireframeBtn.setBounds(1440, 60, 180, 30);
 		toggleWireframeBtn.setVisible(true);
@@ -154,14 +199,13 @@ public class DisplayManager {
 				if (wireframeMode) {
 					wireframeMode = false;
 					toggleWireframeBtn.setText("Enable Wireframe Mode");
-				}
-				else {
+				} else {
 					wireframeMode = true;
 					toggleWireframeBtn.setText("Disable Wireframe Mode");
 				}
 			}
 		});
-		
+
 		JButton toggleBrushBtn = new JButton("Enable Editing Brush");
 		toggleBrushBtn.setBounds(1280, 140, 160, 30);
 		toggleBrushBtn.setVisible(true);
@@ -170,15 +214,14 @@ public class DisplayManager {
 			public void actionPerformed(ActionEvent e) {
 				if (toggleBrushBtn.getText().equals("Disable Editing Brush")) {
 					toggleBrushBtn.setText("Enable Editing Brush");
-					changeBrushState = true;
-				}
-				else {
+					brushEnabled = false;
+				} else {
 					toggleBrushBtn.setText("Disable Editing Brush");
-					changeBrushState = true;
+					brushEnabled = true;
 				}
 			}
 		});
-		
+
 		JComboBox colorCombobox = new JComboBox();
 		colorCombobox.setBounds(1480, 140, 120, 30);
 		colorCombobox.setModel(new DefaultComboBoxModel(colorNames.toArray()));
@@ -193,37 +236,36 @@ public class DisplayManager {
 				changeBrushColor = true;
 			}
 		});
-		
+
 		JLabel brushRadiusLbl = new JLabel("Brush Radius");
 		brushRadiusLbl.setBounds(1380, 220, 120, 30);
 		brushRadiusLbl.setHorizontalAlignment(SwingConstants.CENTER);
 		brushRadiusLbl.setForeground(Color.DARK_GRAY);
 		brushRadiusLbl.setVisible(true);
 		mainPanel.add(brushRadiusLbl);
-		
+
 		JSlider brushRadiusSlider = new JSlider();
 		brushRadiusSlider.setBounds(1340, 250, 200, 30);
 		brushRadiusSlider.setBackground(Color.DARK_GRAY);
 		brushRadiusSlider.setMinimum(1);
-		brushRadiusSlider.setMaximum(160);
+		brushRadiusSlider.setMaximum(100);
 		brushRadiusSlider.setValue(10);
 		brushRadiusSlider.setVisible(true);
 		mainPanel.add(brushRadiusSlider);
 		brushRadiusSlider.addChangeListener(new ChangeListener() {
 			public void stateChanged(ChangeEvent arg0) {
-				brushRadius = (float)brushRadiusSlider.getValue();
+				brushRadius = (float) brushRadiusSlider.getValue();
 				changeBrushRadius = true;
 			}
 		});
-		
-		
+
 		JLabel brushForceLbl = new JLabel("Brush Force");
 		brushForceLbl.setBounds(1380, 320, 120, 30);
 		brushForceLbl.setHorizontalAlignment(SwingConstants.CENTER);
 		brushForceLbl.setForeground(Color.DARK_GRAY);
 		brushForceLbl.setVisible(true);
 		mainPanel.add(brushForceLbl);
-		
+
 		JSlider brushForceSlider = new JSlider();
 		brushForceSlider.setBounds(1340, 360, 200, 30);
 		brushForceSlider.setBackground(Color.DARK_GRAY);
@@ -236,7 +278,7 @@ public class DisplayManager {
 		mainPanel.add(brushForceSlider);
 		brushForceSlider.addChangeListener(new ChangeListener() {
 			public void stateChanged(ChangeEvent arg0) {
-				float force = (float)brushForceSlider.getValue();
+				float force = (float) brushForceSlider.getValue();
 				force /= 10;
 				if (force == 0) {
 					force = 2.0f;
@@ -244,64 +286,82 @@ public class DisplayManager {
 				brushForce = force;
 			}
 		});
-		
+
 		JRadioButton sharpModeRB = new JRadioButton("Sharp");
 		sharpModeRB.setBounds(1380, 430, 120, 30);
 		sharpModeRB.setVisible(true);
 		sharpModeRB.setSelected(true);
 		mainPanel.add(sharpModeRB);
-		
+
 		JRadioButton sinusoidalModeRB = new JRadioButton("Sinusoidal");
 		sinusoidalModeRB.setBounds(1380, 460, 120, 30);
 		sinusoidalModeRB.setVisible(true);
 		sinusoidalModeRB.setSelected(false);
 		mainPanel.add(sinusoidalModeRB);
-		
+
 		JRadioButton eraserModeRB = new JRadioButton("Eraser");
 		eraserModeRB.setBounds(1380, 490, 120, 30);
 		eraserModeRB.setVisible(true);
 		eraserModeRB.setSelected(false);
 		mainPanel.add(eraserModeRB);
-		
+
+		JRadioButton smoothingModeRB = new JRadioButton("Smoothing Tool");
+		smoothingModeRB.setBounds(1380, 520, 120, 30);
+		smoothingModeRB.setVisible(true);
+		smoothingModeRB.setSelected(false);
+		mainPanel.add(smoothingModeRB);
+
 		sharpModeRB.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				sharpModeRB.setSelected(true);
 				sinusoidalModeRB.setSelected(false);
 				eraserModeRB.setSelected(false);
+				smoothingModeRB.setSelected(false);
 				editingTransformationMode = "sharp";
 			}
 		});
-		
+
 		sinusoidalModeRB.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				sinusoidalModeRB.setSelected(true);
 				sharpModeRB.setSelected(false);
 				eraserModeRB.setSelected(false);
+				smoothingModeRB.setSelected(false);
 				editingTransformationMode = "sinusoidal";
 			}
 		});
-		
+
 		eraserModeRB.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				eraserModeRB.setSelected(true);
 				sharpModeRB.setSelected(false);
 				sinusoidalModeRB.setSelected(false);
+				smoothingModeRB.setSelected(false);
 				editingTransformationMode = "eraser";
 			}
 		});
-		
-		
+
+		smoothingModeRB.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				smoothingModeRB.setSelected(true);
+				eraserModeRB.setSelected(false);
+				sharpModeRB.setSelected(false);
+				sinusoidalModeRB.setSelected(false);
+				editingTransformationMode = "smoothing";
+			}
+		});
+
 		// Menu Bars
 		final JMenuBar topMenuBar = new JMenuBar();
 		frame.setJMenuBar(topMenuBar);
-		
+
 		// Menus
 		JMenu fileMenu = new JMenu("File");
 		topMenuBar.add(fileMenu);
-		
+
 		JMenu editMenu = new JMenu("Edit");
 		topMenuBar.add(editMenu);
-		
+
 		// File Menu Items
 		JMenuItem newFile_MenuItem = new JMenuItem("New Flat Terrain");
 		newFile_MenuItem.addActionListener(new ActionListener() {
@@ -310,7 +370,7 @@ public class DisplayManager {
 			}
 		});
 		fileMenu.add(newFile_MenuItem);
-		
+
 		JMenuItem openFile_MenuItem = new JMenuItem("Load Terrain");
 		openFile_MenuItem.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
@@ -319,15 +379,15 @@ public class DisplayManager {
 				File workingDirectory = new File(System.getProperty("user.dir"));
 				fileChooser.setCurrentDirectory(workingDirectory);
 				int result = fileChooser.showOpenDialog(frame);
-				if(result == JFileChooser.OPEN_DIALOG) {
+				if (result == JFileChooser.OPEN_DIALOG) {
 					openTerrainFilePath = fileChooser.getSelectedFile().getAbsolutePath().toString();
 					openTerrainFile = true;
-                }
+				}
 			}
 		});
 		fileMenu.add(openFile_MenuItem);
 		fileMenu.addSeparator();
-		
+
 		JMenuItem saveFile_MenuItem = new JMenuItem("Save");
 		saveFile_MenuItem.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
@@ -339,16 +399,17 @@ public class DisplayManager {
 					File workingDirectory = new File(System.getProperty("user.dir"));
 					fileChooser.setCurrentDirectory(workingDirectory);
 					int result = fileChooser.showSaveDialog(frame);
-					if(result == JFileChooser.OPEN_DIALOG) {
+					if (result == JFileChooser.OPEN_DIALOG) {
 						outputPath = fileChooser.getSelectedFile().getAbsolutePath().toString();
 						if (!outputPath.endsWith(".ter")) {
 							outputPath += ".ter";
 						}
-						
+
 						if (firstTimeLoad) {
 							if (new File(outputPath).exists()) {
-								int choice = JOptionPane.showConfirmDialog(frame, "File already exists. Are you sure you want to overwrite?", 
-										null, JOptionPane.YES_NO_OPTION, JOptionPane.PLAIN_MESSAGE, null);
+								int choice = JOptionPane.showConfirmDialog(frame,
+										"File already exists. Are you sure you want to overwrite?", null,
+										JOptionPane.YES_NO_OPTION, JOptionPane.PLAIN_MESSAGE, null);
 								if (choice != 0) {
 									// User DOES NOT want to overwrite
 									return;
@@ -356,17 +417,16 @@ public class DisplayManager {
 							}
 							firstTimeLoad = false;
 						}
-						
+
 						saveTerrainFile = true;
-	                }
-				}
-				else {
+					}
+				} else {
 					saveTerrainFile = true;
 				}
 			}
 		});
 		fileMenu.add(saveFile_MenuItem);
-		
+
 		JMenuItem saveFileAs_MenuItem = new JMenuItem("Save As...");
 		saveFileAs_MenuItem.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
@@ -377,34 +437,35 @@ public class DisplayManager {
 				File workingDirectory = new File(System.getProperty("user.dir"));
 				fileChooser.setCurrentDirectory(workingDirectory);
 				int result = fileChooser.showSaveDialog(frame);
-				if(result == JFileChooser.OPEN_DIALOG) {
+				if (result == JFileChooser.OPEN_DIALOG) {
 					outputPath = fileChooser.getSelectedFile().getAbsolutePath().toString();
 					if (!outputPath.endsWith(".ter")) {
 						outputPath += ".ter";
 					}
-					
+
 					if (new File(outputPath).exists()) {
-						int choice = JOptionPane.showConfirmDialog(frame, "File already exists. Are you sure you want to overwrite?", 
-								null, JOptionPane.YES_NO_OPTION, JOptionPane.PLAIN_MESSAGE, null);
+						int choice = JOptionPane.showConfirmDialog(frame,
+								"File already exists. Are you sure you want to overwrite?", null,
+								JOptionPane.YES_NO_OPTION, JOptionPane.PLAIN_MESSAGE, null);
 						if (choice != 0) {
 							// User DOES NOT want to overwrite
 							return;
 						}
 					}
-					
+
 					saveTerrainFile = true;
-                }
+				}
 			}
 		});
 		fileMenu.add(saveFileAs_MenuItem);
-		
+
 		// Edit Menu Items
 		JMenuItem undo_MenuItem = new JMenuItem("Undo");
 		editMenu.add(undo_MenuItem);
-		
+
 		JMenuItem redo_MenuItem = new JMenuItem("Redo");
 		editMenu.add(redo_MenuItem);
-		
+
 		/******** ###################################### *************///
 
 		canvas = new Canvas() {
@@ -430,6 +491,25 @@ public class DisplayManager {
 
 		// frame.pack();
 		frame.setVisible(true);
+	}
+
+	private int promptUser(String prompt) {
+		int choice = JOptionPane.showConfirmDialog(frame, prompt, null, JOptionPane.YES_NO_OPTION,
+				JOptionPane.PLAIN_MESSAGE, null);
+		return choice;
+	}
+	
+	private String chooseFile() {
+		JFileChooser fileChooser = new JFileChooser();
+		fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+		File workingDirectory = new File(System.getProperty("user.dir"));
+		fileChooser.setCurrentDirectory(workingDirectory);
+		int result = fileChooser.showOpenDialog(frame);
+		String filePath = "";
+		if (result == JFileChooser.OPEN_DIALOG) {
+			filePath = fileChooser.getSelectedFile().getName();
+		}
+		return filePath;
 	}
 
 	public static void createDisplay() {

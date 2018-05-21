@@ -5,7 +5,11 @@ in vec3 surfaceNormal;
 
 out vec4 out_color;
 
-uniform sampler2D textureSampler;
+uniform sampler2D backgroundTexture;
+uniform sampler2D rTexture;
+uniform sampler2D gTexture;
+uniform sampler2D bTexture;
+uniform sampler2D blendMap;
 
 // brush settings
 in float shouldPaint;
@@ -13,15 +17,23 @@ in vec4 fragment_BrushColor;
 
 void main(void)
 {
-	vec4 colorFromTexture = texture(textureSampler, pass_uvCoordinate);
+	vec4 blendMapColor = texture(blendMap, pass_uvCoordinate);
+	float backTextureAmount = 1 - (blendMapColor.r + blendMapColor.g + blendMapColor.b);
+	vec2 tiledCoords = pass_uvCoordinate * 260.0;
+	vec4 backgroundTextureColor = texture(backgroundTexture, tiledCoords) * backTextureAmount;
+	vec4 rTextureColor = texture(rTexture, tiledCoords) * blendMapColor.r;
+	vec4 gTextureColor = texture(gTexture, tiledCoords) * blendMapColor.g;
+	vec4 bTextureColor = texture(bTexture, tiledCoords) * blendMapColor.b;
+	
+	vec4 totalColor = backgroundTextureColor + rTextureColor + gTextureColor + bTextureColor;
 	
 	if (shouldPaint > 0)
 	{
-		out_color = mix(colorFromTexture, fragment_BrushColor, 0.14);
+		out_color = mix(totalColor, fragment_BrushColor, 0.14);
 	}
 	else 
 	{
-		out_color = colorFromTexture;
+		out_color = totalColor;
 	}
 	
 	// transparancy

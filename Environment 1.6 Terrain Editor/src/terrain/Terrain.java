@@ -18,7 +18,6 @@ import org.lwjgl.util.vector.Vector3f;
 
 import loaders.StaticLoader;
 import models.Mesh;
-import models.MeshTexture;
 
 public class Terrain {
 
@@ -30,20 +29,24 @@ public class Terrain {
 
 	private float x, z;
 	private Mesh mesh;
-	private MeshTexture texture;
+	private TerrainTexturePack texturePack;
+	private TerrainTexture blendMap;
 	private int[] verticesVboID = new int[1];
+	
+	private String blendMapFilePath = "";
+	private String backTexFilePath = "";
+	private String rTexFilePath = "";
+	private String gTexFilePath = "";
+	private String bTexFilePath = "";
 
 	public List<TerrainPoint> vertices = new ArrayList<TerrainPoint>();
 
-	public Terrain(int gridX, int gridZ, StaticLoader loader, MeshTexture texture) {
-		this.texture = texture;
+	public Terrain(int gridX, int gridZ, StaticLoader loader, TerrainTexturePack texturePack, TerrainTexture blendMap) {
+		this.texturePack = texturePack;
+		this.blendMap = blendMap;
 		this.x = gridX * SIZE;
 		this.z = gridZ * SIZE;
 		this.mesh = generateFlatTerrain(loader);
-	}
-
-	public void setTexture(String filename, StaticLoader loader) {
-		this.texture = loader.loadMeshTexture(filename);
 	}
 
 	public void updateVertices() {
@@ -219,8 +222,12 @@ public class Terrain {
 		return mesh;
 	}
 
-	public MeshTexture getTexture() {
-		return texture;
+	public TerrainTexturePack getTexturePack() {
+		return texturePack;
+	}
+	
+	public TerrainTexture getBlendMap() {
+		return blendMap;
 	}
 
 	public float getHeightOfTerrain(float worldX, float worldZ) {
@@ -311,6 +318,32 @@ public class Terrain {
 				while (true) {
 					line = reader.readLine();
 					try {
+						if (line.startsWith("-blend_map ")) {
+							String[] currentLine = line.split("\\s+");
+							String filename = currentLine[1];
+							loadBlendMap(filename, loader);
+						}
+						if (line.startsWith("-background_texture ")) {
+							String[] currentLine = line.split("\\s+");
+							String filename = currentLine[1];
+							loadBackgroundTexture(filename, loader);
+						}
+						if (line.startsWith("-r_texture ")) {
+							String[] currentLine = line.split("\\s+");
+							String filename = currentLine[1];
+							loadRTexture(filename, loader);
+						}
+						if (line.startsWith("-g_texture ")) {
+							String[] currentLine = line.split("\\s+");
+							String filename = currentLine[1];
+							loadGTexture(filename, loader);
+						}
+						if (line.startsWith("-b_texture ")) {
+							String[] currentLine = line.split("\\s+");
+							String filename = currentLine[1];
+							loadBTexture(filename, loader);
+						}
+						
 						if (line.startsWith("-point ")) {
 							String[] currentLine = line.split("\\s+");
 							float xPos = Float.valueOf(currentLine[1]);
@@ -354,6 +387,11 @@ public class Terrain {
 			outputFile.createNewFile();
 			FileWriter fw = new FileWriter(outputFile, false);
 			fw.write("vertex_count " + VERTEX_COUNT + "\n");
+			fw.write("-blend_map " + blendMapFilePath + "\n");
+			fw.write("-background_texture " + backTexFilePath + "\n");
+			fw.write("-r_texture " + rTexFilePath + "\n");
+			fw.write("-g_texture " + gTexFilePath + "\n");
+			fw.write("-b_texture " + bTexFilePath + "\n");
 			for (TerrainPoint vertex : vertices) {
 				float xPos = vertex.x, zPos = vertex.z, height = vertex.getHeight();
 				fw.write("-point " + xPos + " " + height + " " + zPos + "\n");
@@ -363,5 +401,30 @@ public class Terrain {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	public void loadBlendMap(String blendMapFilePath, StaticLoader loader) {
+		this.blendMap = loader.loadTerrainTexture("Assets/Textures/" + blendMapFilePath);
+		this.blendMapFilePath = blendMapFilePath;
+	}
+	
+	public void loadRTexture(String filepath, StaticLoader loader) {
+		this.texturePack.setrTexture(loader.loadTerrainTexture("Assets/Textures/" + filepath));
+		this.rTexFilePath = filepath;
+	}
+	
+	public void loadGTexture(String filepath, StaticLoader loader) {
+		this.texturePack.setgTexture(loader.loadTerrainTexture("Assets/Textures/" + filepath));
+		this.gTexFilePath = filepath;
+	}
+	
+	public void loadBTexture(String filepath, StaticLoader loader) {
+		this.texturePack.setbTexture(loader.loadTerrainTexture("Assets/Textures/" + filepath));
+		this.bTexFilePath = filepath;
+	}
+	
+	public void loadBackgroundTexture(String filepath, StaticLoader loader) {
+		this.texturePack.setBackgroundTexture(loader.loadTerrainTexture("Assets/Textures/" + filepath));
+		this.backTexFilePath = filepath;
 	}
 }

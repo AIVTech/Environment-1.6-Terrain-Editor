@@ -13,19 +13,20 @@ import display.DisplayManager;
 import loaders.StaticLoader;
 import rendering.CoreRenderer;
 import terrain.Terrain;
+import terrain.TerrainTexture;
+import terrain.TerrainTexturePack;
 import utility.MousePicker;
 
 public class TerrainEditor {
 
 	private static Thread glThread;
-	
+
 	private static List<Terrain> terrains;
 	private static StaticLoader loader;
 	private static CoreRenderer renderer;
 	private static Terrain terrain;
 	private static MousePicker mousePicker;
 	private static EditorCamera camera;
-	private static boolean editingMode = false;
 
 	private static void stopGL() {
 		try {
@@ -35,19 +36,15 @@ public class TerrainEditor {
 			e.printStackTrace();
 		}
 	}
-	
-	private static void setTerrainTexture(String textureFilepath) {
-		terrains.get(0).setTexture(textureFilepath, loader);
-	}
-	
+
 	private static void saveTerrainFile(String outputPath) {
 		terrains.get(0).writeTerrainDataToFile(outputPath);
 	}
-	
+
 	private static void openTerrainFile(String filepath) {
 		terrains.get(0).loadFromFile(filepath, loader);
 	}
-	
+
 	private static void loadNewTerrain() {
 		terrains.get(0).loadFlatTerrain(loader);
 	}
@@ -59,17 +56,25 @@ public class TerrainEditor {
 				DisplayManager.createDisplay();
 				/*****************************************************/
 				// ================= PREPARATIONS ====================//
-				
+
 				loader = new StaticLoader();
 				renderer = new CoreRenderer();
-				
+
 				terrains = new ArrayList<Terrain>();
 				
-				terrain = new Terrain(0, -1, loader, loader.loadMeshTexture("Assets/Textures/darkGrass.jpg"));
+				TerrainTexture backTexture = loader.loadTerrainTexture("Assets/Textures/darkGrass.jpg");
+				TerrainTexture rTexture = loader.loadTerrainTexture("Assets/Textures/darkGrass.png");
+				TerrainTexture gTexture = loader.loadTerrainTexture("Assets/Textures/darkGrass.jpg");
+				TerrainTexture bTexture = loader.loadTerrainTexture("Assets/Textures/darkGrass.jpg");
+				TerrainTexture blendMap = loader.loadTerrainTexture("Assets/Textures/defaultBlendMap.png");
+				
+				TerrainTexturePack texPack = new TerrainTexturePack(backTexture, rTexture, gTexture, bTexture);
+
+				terrain = new Terrain(0, -1, loader, texPack, blendMap);
 				terrains.add(terrain);
 
 				camera = new EditorCamera();
-				
+
 				mousePicker = new MousePicker(camera, CoreRenderer.getProjectionMatrix(), terrain);
 
 				// ***************************************************//
@@ -79,13 +84,13 @@ public class TerrainEditor {
 					// Logic
 					camera.update();
 					updateWorld();
-					
+
 					mousePicker.update();
 					Vector3f rayPosition = mousePicker.getCurrentTerrainPoint();
 					if (rayPosition != null) {
 						renderer.setRayPosition(rayPosition);
 					}
-					
+
 					// Rendering
 					renderer.prepare();
 					renderer.renderScene(terrains, camera);
@@ -101,11 +106,11 @@ public class TerrainEditor {
 				loader.cleanUp();
 
 				DisplayManager.closeDisplay();
-                stopGL();
-                System.exit(0);
+				stopGL();
+				System.exit(0);
 			}
 		}, "LWJGL Thread");
-		
+
 		glThread.start();
 	}
 
@@ -114,62 +119,62 @@ public class TerrainEditor {
 	}
 
 	private static void ProcessWindowInput() {
-		if (editingMode) {												// Edit the terrain height in a highlighted spot
+		if (DisplayManager.brushEnabled) { // Edit the terrain height in a highlighted spot
 			if (Mouse.isButtonDown(1)) {
-				terrain.changeVerticesHeight(mousePicker.getCurrentTerrainPoint(), DisplayManager.brushRadius, DisplayManager.brushForce, DisplayManager.editingTransformationMode);
+				terrain.changeVerticesHeight(mousePicker.getCurrentTerrainPoint(), DisplayManager.brushRadius,
+						DisplayManager.brushForce, DisplayManager.editingTransformationMode);
 			}
 		}
 	}
-	
-	private static void updateWorld() {
-		if (DisplayManager.loadNewTexture) {							// Load Terrain Texture
-			DisplayManager.loadNewTexture = false;
-			setTerrainTexture(DisplayManager.textureFilePath);
-		}
-		
-		if (DisplayManager.wireframeMode) {
-			GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_LINE);	// Enable wireframe mode
-		} else {
-			GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_FILL);	// Disable wireframe mode
-		}
-		
-		if (DisplayManager.changeBrushState) {							// Toggle brush
 
-			if (DisplayManager.brushEnabled) {
-				renderer.setBrushState(false);
-				DisplayManager.brushEnabled = false;
-				editingMode = false;
-			}
-			else {
-				renderer.setBrushState(true);
-				DisplayManager.brushEnabled = true;
-				editingMode = true;
-			}
-			
-			DisplayManager.changeBrushState = false;
+	private static void updateWorld() {
+		if (DisplayManager.loadNewBlendMap) { 							// Load new blend map
+			DisplayManager.loadNewBlendMap = false;
+			terrains.get(0).loadBlendMap(DisplayManager.blendMapFilePath, loader);
 		}
 		
-		if (DisplayManager.changeBrushColor) {							// Load new brush color
+		if (DisplayManager.updateTerrainTextures) {						// Update terrain textures
+			terrains.get(0).loadBackgroundTexture(DisplayManager.backTexFilePath, loader);
+			terrains.get(0).loadRTexture(DisplayManager.rTexFilePath, loader);
+			terrains.get(0).loadGTexture( DisplayManager.gTexFilePath, loader);
+			terrains.get(0).loadBTexture(DisplayManager.bTexFilePath, loader);
+			DisplayManager.updateTerrainTextures = false;
+		}
+
+		if (DisplayManager.wireframeMode) {
+			GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_LINE); 	// Enable wireframe mode
+		} else {
+			GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_FILL); 	// Disable wireframe mode
+		}
+
+		if (DisplayManager.changeBrushColor) { 							// Load new brush color
 			renderer.setBrushColor(DisplayManager.brushColor);
 			DisplayManager.changeBrushColor = false;
 		}
-		
-		if (DisplayManager.changeBrushRadius) {							// Update brush radius
+
+		if (DisplayManager.changeBrushRadius) { 						// Update brush radius
 			renderer.setBrushRadius(DisplayManager.brushRadius);
 			DisplayManager.changeBrushRadius = false;
 		}
-		
-		if (DisplayManager.saveTerrainFile) {							// Save terrain file
+
+		if (DisplayManager.saveTerrainFile) { 							// Save terrain file
 			DisplayManager.saveTerrainFile = false;
 			saveTerrainFile(DisplayManager.outputPath);
 		}
 		
-		if (DisplayManager.openTerrainFile) {							// Open terrain file
+		if (DisplayManager.brushEnabled) {								// Enable brush
+			renderer.setBrushState(true);
+		}
+		else {															// Disable brush
+			renderer.setBrushState(false);
+		}
+
+		if (DisplayManager.openTerrainFile) { 							// Open terrain file
 			DisplayManager.openTerrainFile = false;
 			openTerrainFile(DisplayManager.openTerrainFilePath);
 		}
-		
-		if (DisplayManager.loadNewTerrain) {
+
+		if (DisplayManager.loadNewTerrain) {							// Load new flat terrain
 			DisplayManager.loadNewTerrain = false;
 			loadNewTerrain();
 		}

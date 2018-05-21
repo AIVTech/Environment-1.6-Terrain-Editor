@@ -12,8 +12,8 @@ public class EditorCamera {
 	private float pitch, yaw, roll;
 
 	// movement variables
-	private float walkingSpeed = 60;
-	private float runningSpeed = 100;
+	private float walkingSpeed = 80;
+	private float runningSpeed = 180;
 	private float movementSpeed = walkingSpeed;
 
 	// mouse movement variables

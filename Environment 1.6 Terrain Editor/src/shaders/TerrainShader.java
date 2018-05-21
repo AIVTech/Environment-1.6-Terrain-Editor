@@ -21,6 +21,12 @@ public class TerrainShader extends ShaderBase {
 	private int brushRadiusLocation;
 	private int rayPositionLocation;
 	
+	private int backgroundTextureLocation;
+	private int rTextureLocation;
+	private int	gTextureLocation;
+	private int bTextureLocation;
+	private int blendMapLocation;
+	
 	public TerrainShader() {
 		super(VERTEX_FILE, FRAGMENT_FILE);
 	}
@@ -34,6 +40,11 @@ public class TerrainShader extends ShaderBase {
 		brushColorLocation = super.getUniformLocation("brushColor");
 		rayPositionLocation = super.getUniformLocation("rayPosition");
 		brushRadiusLocation = super.getUniformLocation("brushRadius");
+		backgroundTextureLocation = super.getUniformLocation("backgroundTexture");
+		rTextureLocation = super.getUniformLocation("rTexture");
+		gTextureLocation = super.getUniformLocation("gTexture");
+		bTextureLocation = super.getUniformLocation("bTexture");
+		blendMapLocation = super.getUniformLocation("blendMap");
 	}
 
 	@Override
@@ -41,6 +52,14 @@ public class TerrainShader extends ShaderBase {
 		super.bindAttribute(0, "vertexPosition");
 		super.bindAttribute(1, "textureCoordinate");
 		super.bindAttribute(2, "normalVector");
+	}
+	
+	public void connectTextureUnits() {
+		super.loadInt(backgroundTextureLocation, 0);
+		super.loadInt(rTextureLocation, 1);
+		super.loadInt(gTextureLocation, 2);
+		super.loadInt(bTextureLocation, 3);
+		super.loadInt(blendMapLocation, 4);
 	}
 	
 	public void loadTransformationMatrix(Matrix4f matrix) {
@@ -71,5 +90,4 @@ public class TerrainShader extends ShaderBase {
 	public void loadBrushRadius(float radius) {
 		super.loadFloat(brushRadiusLocation, radius);
 	}
-
 }
