@@ -85,9 +85,11 @@ public class DisplayManager {
 	public static String bTexFilePath = "none";
 	public static boolean updateTerrainTextures = false;
 	
-	public static int newTerrainPosX = -999;
-	public static int newTerrainPosZ = -999;
+	public static int terrainPosX = -999;
+	public static int terrainPosZ = -999;
 	public static boolean addAnotherTerrain = false;
+	public static boolean deleteTerrain = false;
+	public static boolean moveTerrain = false;
 
 	private JFrame frame;
 
@@ -364,8 +366,8 @@ public class DisplayManager {
 		JMenu editMenu = new JMenu("Edit");
 		topMenuBar.add(editMenu);
 		
-		JMenu addTerrainMenu = new JMenu("Terrain");
-		topMenuBar.add(addTerrainMenu);
+		JMenu terrainMenu = new JMenu("Terrain");
+		topMenuBar.add(terrainMenu);
 
 		// File Menu Items
 		JMenuItem newFile_MenuItem = new JMenuItem("New Project");
@@ -475,12 +477,35 @@ public class DisplayManager {
 		addTerrain_MenuItem.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				// prompt user for position of the terrain
-				newTerrainPosX = Integer.parseInt(JOptionPane.showInputDialog("Enter Grid Position X: "));
-				newTerrainPosZ = Integer.parseInt(JOptionPane.showInputDialog("Enter Grid Position Z: "));
+				terrainPosX = Integer.parseInt(JOptionPane.showInputDialog("Enter Grid Position X: "));
+				terrainPosZ = Integer.parseInt(JOptionPane.showInputDialog("Enter Grid Position Z: "));
 				addAnotherTerrain = true;
 			}
 		});
-		addTerrainMenu.add(addTerrain_MenuItem);
+		terrainMenu.add(addTerrain_MenuItem);
+		
+		JMenuItem deleteTerrain_MenuItem = new JMenuItem("Delete Terrain");
+		deleteTerrain_MenuItem.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				// prompt user for position of the terrain
+				terrainPosX = Integer.parseInt(JOptionPane.showInputDialog("Enter Grid Position X: "));
+				terrainPosZ = Integer.parseInt(JOptionPane.showInputDialog("Enter Grid Position Z: "));
+				deleteTerrain = true;
+			}
+		});
+		terrainMenu.add(deleteTerrain_MenuItem);
+		terrainMenu.addSeparator();
+		
+		JMenuItem moveTerrain_MenuItem = new JMenuItem("Move Terrain");
+		moveTerrain_MenuItem.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				// prompt user for position of the terrain
+				terrainPosX = Integer.parseInt(JOptionPane.showInputDialog("Enter Grid Position X: "));
+				terrainPosZ = Integer.parseInt(JOptionPane.showInputDialog("Enter Grid Position Z: "));
+				moveTerrain = true;
+			}
+		});
+		terrainMenu.add(moveTerrain_MenuItem);
 
 		/******** ###################################### *************///
 

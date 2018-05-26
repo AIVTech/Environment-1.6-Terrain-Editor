@@ -25,22 +25,25 @@ public class Terrain {
 	private float[][] heights;
 
 	private float x, z;
+	public int gridX, gridZ;
 	private Mesh mesh;
 	private TerrainTexturePack texturePack;
 	private TerrainTexture blendMap;
 	private int[] verticesVboID = new int[1];
 	
-	private String blendMapFilePath = "";
-	private String backTexFilePath = "";
-	private String rTexFilePath = "";
-	private String gTexFilePath = "";
-	private String bTexFilePath = "";
+	public String blendMapFilePath = "none";
+	public String backTexFilePath = "none";
+	public String rTexFilePath = "none";
+	public String gTexFilePath = "none";
+	public String bTexFilePath = "none";
 
 	public List<TerrainPoint> vertices = new ArrayList<TerrainPoint>();
 
 	public Terrain(int gridX, int gridZ, StaticLoader loader, TerrainTexturePack texturePack, TerrainTexture blendMap) {
 		this.texturePack = texturePack;
 		this.blendMap = blendMap;
+		this.gridX = gridX;
+		this.gridZ = gridZ;
 		this.x = gridX * SIZE;
 		this.z = gridZ * SIZE;
 		this.mesh = generateFlatTerrain(loader);
@@ -52,10 +55,12 @@ public class Terrain {
 	
 	public void setPosX(int gridX) {
 		this.x = gridX * SIZE;
+		this.gridX = gridX;
 	}
 	
 	public void setPosZ(int gridZ) {
 		this.z = gridZ * SIZE;
+		this.gridZ = gridZ;
 	}
 	
 	public void setMesh(Mesh mesh) {
@@ -341,6 +346,13 @@ public class Terrain {
 			e.printStackTrace();
 		}
 	}
+	
+	public void loadNewTexturePack(String backTex, String rTex, String gTex, String bTex, StaticLoader loader) {
+		loadBackgroundTexture(backTex, loader);
+		loadRTexture(rTex, loader);
+		loadGTexture(gTex, loader);
+		loadBTexture(bTex, loader);
+	}
 
 	public void loadBlendMap(String blendMapFilePath, StaticLoader loader) {
 		this.blendMap = loader.loadTerrainTexture("Assets/Textures/" + blendMapFilePath);
@@ -348,22 +360,38 @@ public class Terrain {
 	}
 	
 	public void loadRTexture(String filepath, StaticLoader loader) {
-		this.texturePack.setrTexture(loader.loadTerrainTexture("Assets/Textures/" + filepath));
+		TerrainTexture rTexture = loader.loadTerrainTexture("Assets/Textures/" + filepath);
+		TerrainTexture backTex = this.texturePack.getBackgroundTexture();
+		TerrainTexture gTex = this.texturePack.getgTexture();
+		TerrainTexture bTex = this.texturePack.getbTexture();
+		this.texturePack = new TerrainTexturePack(backTex, rTexture, gTex, bTex);
 		this.rTexFilePath = filepath;
 	}
 	
 	public void loadGTexture(String filepath, StaticLoader loader) {
-		this.texturePack.setgTexture(loader.loadTerrainTexture("Assets/Textures/" + filepath));
+		TerrainTexture gTexture = loader.loadTerrainTexture("Assets/Textures/" + filepath);
+		TerrainTexture backTex = this.texturePack.getBackgroundTexture();
+		TerrainTexture rTex = this.texturePack.getrTexture();
+		TerrainTexture bTex = this.texturePack.getbTexture();
+		this.texturePack = new TerrainTexturePack(backTex, rTex, gTexture, bTex);
 		this.gTexFilePath = filepath;
 	}
 	
 	public void loadBTexture(String filepath, StaticLoader loader) {
-		this.texturePack.setbTexture(loader.loadTerrainTexture("Assets/Textures/" + filepath));
+		TerrainTexture bTexture = loader.loadTerrainTexture("Assets/Textures/" + filepath);
+		TerrainTexture backTex = this.texturePack.getBackgroundTexture();
+		TerrainTexture rTex = this.texturePack.getrTexture();
+		TerrainTexture gTex = this.texturePack.getgTexture();
+		this.texturePack = new TerrainTexturePack(backTex, rTex, gTex, bTexture);
 		this.bTexFilePath = filepath;
 	}
 	
 	public void loadBackgroundTexture(String filepath, StaticLoader loader) {
-		this.texturePack.setBackgroundTexture(loader.loadTerrainTexture("Assets/Textures/" + filepath));
+		TerrainTexture backTexture = loader.loadTerrainTexture("Assets/Textures/" + filepath);
+		TerrainTexture rTex = this.texturePack.getrTexture();
+		TerrainTexture gTex = this.texturePack.getgTexture();
+		TerrainTexture bTex = this.texturePack.getbTexture();
+		this.texturePack = new TerrainTexturePack(backTexture, rTex, gTex, bTex);
 		this.backTexFilePath = filepath;
 	}
 }

@@ -135,7 +135,7 @@ public class TerrainEditor {
 	}
 
 	private static void ProcessWindowInput() {
-		if (DisplayManager.brushEnabled) { // Edit the terrain height in a highlighted spot
+		if (DisplayManager.brushEnabled) { 								// Edit the terrain height in a highlighted spot
 			if (Mouse.isButtonDown(1)) {
 				Terrain terr = mousePicker.getCurrentTerrain();
 				if (terr != null) {
@@ -150,11 +150,17 @@ public class TerrainEditor {
 		if (DisplayManager.loadNewBlendMap) { 							// Load new blend map
 			DisplayManager.loadNewBlendMap = false;
 			Terrain terr = mousePicker.getCurrentTerrain();
+			if (terr == null) {
+				return;
+			}
 			terr.loadBlendMap(DisplayManager.blendMapFilePath, loader);
 		}
 		
 		if (DisplayManager.updateTerrainTextures) {						// Update terrain textures
 			Terrain terr = mousePicker.getCurrentTerrain();
+			if (terr == null) {
+				return;
+			}
 			terr.loadBackgroundTexture(DisplayManager.backTexFilePath, loader);
 			terr.loadRTexture(DisplayManager.rTexFilePath, loader);
 			terr.loadGTexture( DisplayManager.gTexFilePath, loader);
@@ -204,10 +210,35 @@ public class TerrainEditor {
 			DisplayManager.addAnotherTerrain = false;
 			TerrainTexture grassTex = loader.loadTerrainTexture("Assets/Textures/darkGrass.jpg");
 			TerrainTexturePack pack = new TerrainTexturePack(grassTex, grassTex, grassTex, grassTex);
-			Terrain terrain = new Terrain(DisplayManager.newTerrainPosX, DisplayManager.newTerrainPosZ, loader, pack, loader.loadTerrainTexture(""));
+			Terrain terrain = new Terrain(DisplayManager.terrainPosX, DisplayManager.terrainPosZ, loader, pack, loader.loadTerrainTexture(""));
 			terrains.add(terrain);
 			terrainGrid = TerrainLoader.getTerrainGrid(terrains);
 			mousePicker.setTerrainGrid(terrainGrid);
+		}
+		
+		if (DisplayManager.deleteTerrain) {								// Delete terrain
+			DisplayManager.deleteTerrain = false;
+			for (Terrain terr : terrains) {
+				if (terr.gridX == DisplayManager.terrainPosX && terr.gridZ == DisplayManager.terrainPosZ) {
+					terrains.remove(terr);
+					terrainGrid = TerrainLoader.getTerrainGrid(terrains);
+					mousePicker.setTerrainGrid(terrainGrid);
+					break;
+				}
+			}
+		}
+		
+		if (DisplayManager.moveTerrain) {								// Move terrain
+			DisplayManager.moveTerrain = false;
+			for (Terrain terr : terrains) {
+				if (terr.gridX == mousePicker.getCurrentTerrain().gridX && terr.gridZ == mousePicker.getCurrentTerrain().gridZ) {
+					terr.setPosX(DisplayManager.terrainPosX);
+					terr.setPosZ(DisplayManager.terrainPosZ);
+					terrainGrid = TerrainLoader.getTerrainGrid(terrains);
+					mousePicker.setTerrainGrid(terrainGrid);
+					break;
+				}
+			}
 		}
 	}
 

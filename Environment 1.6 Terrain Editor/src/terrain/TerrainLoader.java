@@ -32,13 +32,13 @@ public class TerrainLoader {
 				List<Float> normals = new ArrayList<Float>();
 				int vertex_count = 0;
 				Terrain terrain = null;
-				TerrainTexture grassTex = loader.loadTerrainTexture("");
+				TerrainTexture grassTex = loader.loadTerrainTexture(" ");
 				TerrainTexturePack pack = new TerrainTexturePack(grassTex, grassTex, grassTex, grassTex);
 				while (true) {
 					line = reader.readLine();
 					try {
 						if (line.startsWith("-NEW_TERRAIN")) {
-							terrain = new Terrain(-999, -999, loader, pack, loader.loadTerrainTexture(""));
+							terrain = new Terrain(-999, -999, loader, pack, loader.loadTerrainTexture(" "));
 						}
 						if (line.startsWith("-TERRAIN_END")) {
 							if (terrain != null) {
@@ -54,32 +54,54 @@ public class TerrainLoader {
 						}
 						if (line.startsWith("-grid_position ")) {
 							String[] parsedPositionLine = line.split("\\s+");
-							terrain.setPosX(Integer.valueOf(parsedPositionLine[1]));
-							terrain.setPosZ(Integer.valueOf(parsedPositionLine[2]));
+							int gridX = Integer.valueOf(parsedPositionLine[1]);
+							int gridZ = Integer.valueOf(parsedPositionLine[2]);
+							terrain.setPosX(gridX);
+							terrain.setPosZ(gridZ);
 						}
 						if (line.startsWith("-blend_map ")) {
 							String[] currentLine = line.split("\\s+");
 							String filename = currentLine[1];
+							terrain.blendMapFilePath = filename;
+							if (filename.equals("none")) {
+								continue;
+							}
 							terrain.loadBlendMap(filename, loader);
 						}
 						if (line.startsWith("-background_texture ")) {
 							String[] currentLine = line.split("\\s+");
 							String filename = currentLine[1];
+							terrain.backTexFilePath = filename;
+							if (filename.equals("none")) {
+								continue;
+							}
 							terrain.loadBackgroundTexture(filename, loader);
 						}
 						if (line.startsWith("-r_texture ")) {
 							String[] currentLine = line.split("\\s+");
 							String filename = currentLine[1];
+							terrain.rTexFilePath = filename;
+							if (filename.equals("none")) {
+								continue;
+							}
 							terrain.loadRTexture(filename, loader);
 						}
 						if (line.startsWith("-g_texture ")) {
 							String[] currentLine = line.split("\\s+");
 							String filename = currentLine[1];
+							terrain.gTexFilePath = filename;
+							if (filename.equals("none")) {
+								continue;
+							}
 							terrain.loadGTexture(filename, loader);
 						}
 						if (line.startsWith("-b_texture ")) {
 							String[] currentLine = line.split("\\s+");
 							String filename = currentLine[1];
+							terrain.bTexFilePath = filename;
+							if (filename.equals("none")) {
+								continue;
+							}
 							terrain.loadBTexture(filename, loader);
 						}
 						
@@ -125,6 +147,12 @@ public class TerrainLoader {
 		for (Terrain terrain : terrains) {
 			int x = (int) (terrain.getX() / Terrain.SIZE);
 			int z = (int) (terrain.getZ() / Terrain.SIZE);
+			if (x < 0) {
+				return grid;
+			}
+			if (z < 0) {
+				return grid;
+			}
 			grid[x][z] = terrain;
 		}
 		return grid;
