@@ -117,7 +117,6 @@ public class TerrainLoader {
 		} catch (Exception ex) {
 
 		}
-		System.out.println("FINAL SIZE: " + terrains.size());
 		return terrains;
 	}
 	

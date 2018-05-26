@@ -138,8 +138,10 @@ public class TerrainEditor {
 		if (DisplayManager.brushEnabled) { // Edit the terrain height in a highlighted spot
 			if (Mouse.isButtonDown(1)) {
 				Terrain terr = mousePicker.getCurrentTerrain();
-				terr.changeVerticesHeight(mousePicker.getCurrentTerrainPoint(), DisplayManager.brushRadius,
-						DisplayManager.brushForce, DisplayManager.editingTransformationMode);
+				if (terr != null) {
+					terr.changeVerticesHeight(mousePicker.getCurrentTerrainPoint(), DisplayManager.brushRadius,
+							DisplayManager.brushForce, DisplayManager.editingTransformationMode);
+				}
 			}
 		}
 	}

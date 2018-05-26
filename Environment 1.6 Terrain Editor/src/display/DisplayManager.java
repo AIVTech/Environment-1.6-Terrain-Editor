@@ -38,9 +38,7 @@ import org.lwjgl.opengl.PixelFormat;
 import org.lwjgl.util.vector.Vector4f;
 
 public class DisplayManager {
-
-	// private static int DISPLAY_WIDTH = 1200;
-	// private static int DISPLAY_HEIGHT = 700;
+	
 	private static int DISPLAY_WIDTH = 1700;
 	private static int DISPLAY_HEIGHT = 1000;
 	private static int preferedFPS_CAP = 250;
@@ -81,10 +79,10 @@ public class DisplayManager {
 	public static boolean loadNewTerrain = false;
 	private boolean firstTimeLoad = true;
 	
-	public static String backTexFilePath = "";
-	public static String rTexFilePath = "";
-	public static String gTexFilePath = "";
-	public static String bTexFilePath = "";
+	public static String backTexFilePath = "none";
+	public static String rTexFilePath = "none";
+	public static String gTexFilePath = "none";
+	public static String bTexFilePath = "none";
 	public static boolean updateTerrainTextures = false;
 	
 	public static int newTerrainPosX = -999;
