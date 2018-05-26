@@ -8,7 +8,7 @@ import display.DisplayManager;
 
 public class EditorCamera {
 
-	private Vector3f position = new Vector3f(0, 98.8f, 0);
+	private Vector3f position = new Vector3f(0, 30.2f, 0);
 	private float pitch, yaw, roll;
 
 	// movement variables
@@ -21,7 +21,7 @@ public class EditorCamera {
 	float xoffset = 0, yoffset = 0;
 
 	public EditorCamera() {
-		yaw += 45;
+		yaw += 115;
 	}
 
 	public void update() {

@@ -21,14 +21,27 @@ public class MousePicker {
 	private Matrix4f viewMatrix;
 	private EditorCamera camera;
 
-	private Terrain terrain;
+	private Terrain[][] terrains;
+	private Terrain currentTerrain;
 	private Vector3f currentTerrainPoint;
 
-	public MousePicker(EditorCamera cam, Matrix4f projection, Terrain terrain) {
+	public MousePicker(EditorCamera cam, Matrix4f projection, Terrain[][] terrains) {
 		camera = cam;
 		projectionMatrix = projection;
 		viewMatrix = Maths.createViewMatrix(camera);
-		this.terrain = terrain;
+		this.terrains = terrains;
+	}
+	
+	public Terrain getCurrentTerrain() {
+		return this.currentTerrain;
+	}
+	
+	public Terrain[][] getTerrainGrid() {
+		return terrains;
+	}
+	
+	public void setTerrainGrid(Terrain[][] grid) {
+		this.terrains = grid;
 	}
 
 	public Vector3f getCurrentTerrainPoint() {
@@ -130,7 +143,13 @@ public class MousePicker {
 	}
 
 	private Terrain getTerrain(float worldX, float worldZ) {
-		return terrain;
+		int x = (int) (worldX / Terrain.SIZE);
+		int z = (int) (worldZ / Terrain.SIZE);
+		if (z < 0 || x < 0) {
+			return null;
+		}
+		currentTerrain = terrains[x][z];
+		return currentTerrain;
 	}
 
 }

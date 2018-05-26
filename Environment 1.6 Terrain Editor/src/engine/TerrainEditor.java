@@ -13,6 +13,7 @@ import display.DisplayManager;
 import loaders.StaticLoader;
 import rendering.CoreRenderer;
 import terrain.Terrain;
+import terrain.TerrainLoader;
 import terrain.TerrainTexture;
 import terrain.TerrainTexturePack;
 import utility.MousePicker;
@@ -22,6 +23,7 @@ public class TerrainEditor {
 	private static Thread glThread;
 
 	private static List<Terrain> terrains;
+	private static Terrain[][] terrainGrid;
 	private static StaticLoader loader;
 	private static CoreRenderer renderer;
 	private static Terrain terrain;
@@ -38,15 +40,27 @@ public class TerrainEditor {
 	}
 
 	private static void saveTerrainFile(String outputPath) {
-		terrains.get(0).writeTerrainDataToFile(outputPath);
+		terrains.get(0).writeTerrainDataToFile(outputPath, terrains);
 	}
 
 	private static void openTerrainFile(String filepath) {
-		terrains.get(0).loadFromFile(filepath, loader);
+		terrains = TerrainLoader.loadFromFile(filepath, loader);
+		terrainGrid = TerrainLoader.getTerrainGrid(terrains);
+		mousePicker.setTerrainGrid(terrainGrid);
 	}
 
 	private static void loadNewTerrain() {
-		terrains.get(0).loadFlatTerrain(loader);
+		terrains.clear();
+		TerrainTexture backTexture = loader.loadTerrainTexture("Assets/Textures/darkGrass.jpg");
+		TerrainTexture rTexture = loader.loadTerrainTexture("Assets/Textures/darkGrass.png");
+		TerrainTexture gTexture = loader.loadTerrainTexture("Assets/Textures/darkGrass.jpg");
+		TerrainTexture bTexture = loader.loadTerrainTexture("Assets/Textures/darkGrass.jpg");
+		TerrainTexture blendMap = loader.loadTerrainTexture("Assets/Textures/defaultBlendMap.png");
+		TerrainTexturePack texPack = new TerrainTexturePack(backTexture, rTexture, gTexture, bTexture);
+		terrain = new Terrain(0, 0, loader, texPack, blendMap);
+		terrains.add(terrain);
+		terrainGrid = TerrainLoader.getTerrainGrid(terrains);
+		mousePicker.setTerrainGrid(terrainGrid);
 	}
 
 	private static void startMain() {
@@ -70,12 +84,14 @@ public class TerrainEditor {
 				
 				TerrainTexturePack texPack = new TerrainTexturePack(backTexture, rTexture, gTexture, bTexture);
 
-				terrain = new Terrain(0, -1, loader, texPack, blendMap);
+				terrain = new Terrain(0, 0, loader, texPack, blendMap);
 				terrains.add(terrain);
-
+				
+				terrainGrid = TerrainLoader.getTerrainGrid(terrains);
+				
 				camera = new EditorCamera();
 
-				mousePicker = new MousePicker(camera, CoreRenderer.getProjectionMatrix(), terrain);
+				mousePicker = new MousePicker(camera, CoreRenderer.getProjectionMatrix(), terrainGrid);
 
 				// ***************************************************//
 
@@ -121,7 +137,8 @@ public class TerrainEditor {
 	private static void ProcessWindowInput() {
 		if (DisplayManager.brushEnabled) { // Edit the terrain height in a highlighted spot
 			if (Mouse.isButtonDown(1)) {
-				terrain.changeVerticesHeight(mousePicker.getCurrentTerrainPoint(), DisplayManager.brushRadius,
+				Terrain terr = mousePicker.getCurrentTerrain();
+				terr.changeVerticesHeight(mousePicker.getCurrentTerrainPoint(), DisplayManager.brushRadius,
 						DisplayManager.brushForce, DisplayManager.editingTransformationMode);
 			}
 		}
@@ -130,14 +147,16 @@ public class TerrainEditor {
 	private static void updateWorld() {
 		if (DisplayManager.loadNewBlendMap) { 							// Load new blend map
 			DisplayManager.loadNewBlendMap = false;
-			terrains.get(0).loadBlendMap(DisplayManager.blendMapFilePath, loader);
+			Terrain terr = mousePicker.getCurrentTerrain();
+			terr.loadBlendMap(DisplayManager.blendMapFilePath, loader);
 		}
 		
 		if (DisplayManager.updateTerrainTextures) {						// Update terrain textures
-			terrains.get(0).loadBackgroundTexture(DisplayManager.backTexFilePath, loader);
-			terrains.get(0).loadRTexture(DisplayManager.rTexFilePath, loader);
-			terrains.get(0).loadGTexture( DisplayManager.gTexFilePath, loader);
-			terrains.get(0).loadBTexture(DisplayManager.bTexFilePath, loader);
+			Terrain terr = mousePicker.getCurrentTerrain();
+			terr.loadBackgroundTexture(DisplayManager.backTexFilePath, loader);
+			terr.loadRTexture(DisplayManager.rTexFilePath, loader);
+			terr.loadGTexture( DisplayManager.gTexFilePath, loader);
+			terr.loadBTexture(DisplayManager.bTexFilePath, loader);
 			DisplayManager.updateTerrainTextures = false;
 		}
 
@@ -177,6 +196,16 @@ public class TerrainEditor {
 		if (DisplayManager.loadNewTerrain) {							// Load new flat terrain
 			DisplayManager.loadNewTerrain = false;
 			loadNewTerrain();
+		}
+		
+		if (DisplayManager.addAnotherTerrain) {							// Add another terrain
+			DisplayManager.addAnotherTerrain = false;
+			TerrainTexture grassTex = loader.loadTerrainTexture("Assets/Textures/darkGrass.jpg");
+			TerrainTexturePack pack = new TerrainTexturePack(grassTex, grassTex, grassTex, grassTex);
+			Terrain terrain = new Terrain(DisplayManager.newTerrainPosX, DisplayManager.newTerrainPosZ, loader, pack, loader.loadTerrainTexture(""));
+			terrains.add(terrain);
+			terrainGrid = TerrainLoader.getTerrainGrid(terrains);
+			mousePicker.setTerrainGrid(terrainGrid);
 		}
 	}
 

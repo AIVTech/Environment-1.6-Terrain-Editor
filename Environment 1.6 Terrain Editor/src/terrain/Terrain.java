@@ -1,9 +1,6 @@
 package terrain;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.FloatBuffer;
@@ -21,8 +18,8 @@ import models.Mesh;
 
 public class Terrain {
 
-	private final float SIZE = 4096;
-	private int VERTEX_COUNT = 1024;
+	public static final float SIZE = 1000;
+	private int VERTEX_COUNT = 512;
 	private float highestPoint = 0;
 	private float lowestPoint = 0;
 	private float[][] heights;
@@ -47,6 +44,22 @@ public class Terrain {
 		this.x = gridX * SIZE;
 		this.z = gridZ * SIZE;
 		this.mesh = generateFlatTerrain(loader);
+	}
+	
+	public Terrain() {
+		
+	}
+	
+	public void setPosX(int gridX) {
+		this.x = gridX * SIZE;
+	}
+	
+	public void setPosZ(int gridZ) {
+		this.z = gridZ * SIZE;
+	}
+	
+	public void setMesh(Mesh mesh) {
+		this.mesh = mesh;
 	}
 
 	public void updateVertices() {
@@ -170,7 +183,7 @@ public class Terrain {
 			float maxHeight) {
 		if (inRange(new Vector3f(vertex.x, vertex.getHeight(), vertex.z), new Vector3f(rayX, rayHeight, rayZ),
 				radius)) {
-			vertex.setHeight(maxHeight);
+			vertex.setHeight(0);
 			heights[(int) (vertex.x / SIZE)][(int) (vertex.z / SIZE)] = (int) vertex.getHeight();
 		}
 	}
@@ -190,6 +203,8 @@ public class Terrain {
 			rayZ *= -1;
 		}
 		rayZ = SIZE - rayZ;
+		rayX = rayPosition.x - this.x;
+		rayZ = rayPosition.z - this.z;
 		for (TerrainPoint vertex : vertices) {
 			switch (transformationMode) {
 			case "sharp":
@@ -246,7 +261,7 @@ public class Terrain {
 		return heights[(int) xCoord][(int) zCoord];
 	}
 
-	private Mesh loadPreBuiltTerrain(List<Float> vertexFloats, List<Float> normalArray, int vertexCount,
+	public Mesh loadPreBuiltTerrain(List<Float> vertexFloats, List<Float> normalArray, int vertexCount,
 			StaticLoader loader) {
 		vertices.clear();
 		this.VERTEX_COUNT = vertexCount;
@@ -294,107 +309,31 @@ public class Terrain {
 		return loader.loadTerrainMesh(vertexArray, textureCoords, normals, indices, verticesVboID);
 	}
 
-	public void loadFromFile(String filepath, StaticLoader loader) {
-		try {
-			FileReader isr = null;
-			File terFile = new File(filepath);
-
-			try {
-				isr = new FileReader(terFile);
-			} catch (FileNotFoundException e) {
-				return;
-			}
-
-			BufferedReader reader = new BufferedReader(isr);
-			String line;
-
-			try {
-				String vertexCountLine = reader.readLine();
-				String[] parsedLine = vertexCountLine.split("\\s+");
-				int vertex_count = Integer.valueOf(parsedLine[1]);
-
-				List<Float> vertexFloats = new ArrayList<Float>();
-				List<Float> normals = new ArrayList<Float>();
-				while (true) {
-					line = reader.readLine();
-					try {
-						if (line.startsWith("-blend_map ")) {
-							String[] currentLine = line.split("\\s+");
-							String filename = currentLine[1];
-							loadBlendMap(filename, loader);
-						}
-						if (line.startsWith("-background_texture ")) {
-							String[] currentLine = line.split("\\s+");
-							String filename = currentLine[1];
-							loadBackgroundTexture(filename, loader);
-						}
-						if (line.startsWith("-r_texture ")) {
-							String[] currentLine = line.split("\\s+");
-							String filename = currentLine[1];
-							loadRTexture(filename, loader);
-						}
-						if (line.startsWith("-g_texture ")) {
-							String[] currentLine = line.split("\\s+");
-							String filename = currentLine[1];
-							loadGTexture(filename, loader);
-						}
-						if (line.startsWith("-b_texture ")) {
-							String[] currentLine = line.split("\\s+");
-							String filename = currentLine[1];
-							loadBTexture(filename, loader);
-						}
-						
-						if (line.startsWith("-point ")) {
-							String[] currentLine = line.split("\\s+");
-							float xPos = Float.valueOf(currentLine[1]);
-							float height = Float.valueOf(currentLine[2]);
-							float zPos = Float.valueOf(currentLine[3]);
-							vertexFloats.add(xPos);
-							vertexFloats.add(height);
-							vertexFloats.add(zPos);
-							normals.add(0f);
-							normals.add(1f);
-							normals.add(0f);
-						}
-						if (line.startsWith("-end")) {
-							break;
-						}
-					} catch (NullPointerException ne) {
-						break;
-					}
-				}
-
-				this.mesh = loadPreBuiltTerrain(vertexFloats, normals, vertex_count, loader);
-			} catch (IOException e) {
-				try {
-					reader.close();
-				} catch (IOException e1) {
-				}
-				return;
-			}
-			try {
-				reader.close();
-			} catch (IOException e) {
-			}
-		} catch (Exception ex) {
-
-		}
+	public void parseTerrainFile(String filepath, StaticLoader loader) {
+		
 	}
 
-	public void writeTerrainDataToFile(String outputPath) {
+	public void writeTerrainDataToFile(String outputPath, List<Terrain> terrains) {
 		File outputFile = new File(outputPath);
 		try {
 			outputFile.createNewFile();
 			FileWriter fw = new FileWriter(outputFile, false);
-			fw.write("vertex_count " + VERTEX_COUNT + "\n");
-			fw.write("-blend_map " + blendMapFilePath + "\n");
-			fw.write("-background_texture " + backTexFilePath + "\n");
-			fw.write("-r_texture " + rTexFilePath + "\n");
-			fw.write("-g_texture " + gTexFilePath + "\n");
-			fw.write("-b_texture " + bTexFilePath + "\n");
-			for (TerrainPoint vertex : vertices) {
-				float xPos = vertex.x, zPos = vertex.z, height = vertex.getHeight();
-				fw.write("-point " + xPos + " " + height + " " + zPos + "\n");
+			for (Terrain ter : terrains) {
+				int gridPosX = (int) (ter.x / Terrain.SIZE);
+				int gridPosZ = (int) (ter.z / Terrain.SIZE);
+				fw.write("-NEW_TERRAIN\n");
+				fw.write("-vertex_count " + ter.VERTEX_COUNT + "\n");
+				fw.write("-grid_position " + gridPosX + " " + gridPosZ + "\n");
+				fw.write("-blend_map " + ter.blendMapFilePath + "\n");
+				fw.write("-background_texture " + ter.backTexFilePath + "\n");
+				fw.write("-r_texture " + ter.rTexFilePath + "\n");
+				fw.write("-g_texture " + ter.gTexFilePath + "\n");
+				fw.write("-b_texture " + ter.bTexFilePath + "\n");
+				for (TerrainPoint vertex : ter.vertices) {
+					float xPos = vertex.x, zPos = vertex.z, height = vertex.getHeight();
+					fw.write("-point " + xPos + " " + height + " " + zPos + "\n");
+				}
+				fw.write("-TERRAIN_END\n");
 			}
 			fw.write("\n-end");
 			fw.close();

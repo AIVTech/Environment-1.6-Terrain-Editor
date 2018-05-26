@@ -86,6 +86,10 @@ public class DisplayManager {
 	public static String gTexFilePath = "";
 	public static String bTexFilePath = "";
 	public static boolean updateTerrainTextures = false;
+	
+	public static int newTerrainPosX = -999;
+	public static int newTerrainPosZ = -999;
+	public static boolean addAnotherTerrain = false;
 
 	private JFrame frame;
 
@@ -361,9 +365,12 @@ public class DisplayManager {
 
 		JMenu editMenu = new JMenu("Edit");
 		topMenuBar.add(editMenu);
+		
+		JMenu addTerrainMenu = new JMenu("Terrain");
+		topMenuBar.add(addTerrainMenu);
 
 		// File Menu Items
-		JMenuItem newFile_MenuItem = new JMenuItem("New Flat Terrain");
+		JMenuItem newFile_MenuItem = new JMenuItem("New Project");
 		newFile_MenuItem.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				loadNewTerrain = true;
@@ -371,7 +378,7 @@ public class DisplayManager {
 		});
 		fileMenu.add(newFile_MenuItem);
 
-		JMenuItem openFile_MenuItem = new JMenuItem("Load Terrain");
+		JMenuItem openFile_MenuItem = new JMenuItem("Load Project");
 		openFile_MenuItem.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				JFileChooser fileChooser = new JFileChooser();
@@ -465,6 +472,17 @@ public class DisplayManager {
 
 		JMenuItem redo_MenuItem = new JMenuItem("Redo");
 		editMenu.add(redo_MenuItem);
+		
+		JMenuItem addTerrain_MenuItem = new JMenuItem("Add Terrain");
+		addTerrain_MenuItem.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				// prompt user for position of the terrain
+				newTerrainPosX = Integer.parseInt(JOptionPane.showInputDialog("Enter Grid Position X: "));
+				newTerrainPosZ = Integer.parseInt(JOptionPane.showInputDialog("Enter Grid Position Z: "));
+				addAnotherTerrain = true;
+			}
+		});
+		addTerrainMenu.add(addTerrain_MenuItem);
 
 		/******** ###################################### *************///
 
